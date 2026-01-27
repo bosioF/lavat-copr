@@ -9,15 +9,18 @@
 #include <time.h>
 #include <unistd.h>
 #include <float.h>
+#include <math.h>
 
 #define MIN_NBALLS 5
 #define MAX_NBALLS 20
 
 typedef struct {
-  int x;
-  int y;
-  int dx;
-  int dy;
+  float x;
+  float y;
+  float vx;
+  float vy;
+  float heat;
+  int restTicks;
 } Ball;
 
 uintattr_t pallete[11];
@@ -35,6 +38,12 @@ static int nballs = 10;
 static short speedMult = 5;
 static short rim = 1;
 static short contained = 0;
+static short gravityMode = 0;
+static float gravityStrength = 0.12f;
+static float buoyancyStrength = 0.22f;
+static float heatGain = 0.035f;
+static float heatLoss = 0.0045f;
+static float bounceDamp = 0.85f;
 static float radiusIn = 110;
 static float radius;
 static int margin;
@@ -115,16 +124,99 @@ int main(int argc, char *argv[]) {
     // move balls
     for (int i = 0; i < nballs; i++) {
 
-      if (balls[i].x + balls[i].dx >= maxX - margin ||
-          balls[i].x + balls[i].dx < margin)
-        balls[i].dx *= -1;
+      if (gravityMode) {
+        float minY = (float)margin;
+        float maxYf = (float)(maxY - margin - 1);
+        float topZone = minY + 6.0f;
+        float bottomZone = maxYf - 6.0f;
 
-      if (balls[i].y + balls[i].dy >= maxY - margin ||
-          balls[i].y + balls[i].dy < margin)
-        balls[i].dy *= -1;
+        if (balls[i].restTicks > 0) {
+          balls[i].restTicks--;
+          balls[i].vy = 0.0f;
+          balls[i].heat -= heatLoss * 2.0f;
+        } else {
+          if (balls[i].y > bottomZone) {
+            balls[i].heat += heatGain;
+          } else {
+            balls[i].heat -= heatLoss;
+          }
 
-      balls[i].x += balls[i].dx;
-      balls[i].y += balls[i].dy;
+          if (balls[i].y < topZone) {
+            balls[i].heat -= heatLoss * 1.5f;
+          }
+
+          balls[i].vy += gravityStrength - buoyancyStrength * balls[i].heat;
+        }
+
+        if (balls[i].heat < 0.0f)
+          balls[i].heat = 0.0f;
+        if (balls[i].heat > 1.0f)
+          balls[i].heat = 1.0f;
+
+        // Drag helps create the "hang time" at the top.
+        balls[i].vx *= 0.995f;
+        balls[i].vy *= 0.997f;
+      }
+
+      float nextX = balls[i].x + balls[i].vx;
+      float nextY = balls[i].y + balls[i].vy;
+      float minX = (float)margin;
+      float maxXf = (float)(maxX - margin - 1);
+      float minY = (float)margin;
+      float maxYf = (float)(maxY - margin - 1);
+
+      if (balls[i].vy > 2.5f)
+        balls[i].vy = 2.5f;
+      if (balls[i].vy < -2.5f)
+        balls[i].vy = -2.5f;
+
+      if (nextX > maxXf) {
+        balls[i].x = maxXf;
+        balls[i].vx = -balls[i].vx;
+        if (gravityMode) {
+          balls[i].vx *= bounceDamp;
+        }
+      } else if (nextX < minX) {
+        balls[i].x = minX;
+        balls[i].vx = -balls[i].vx;
+        if (gravityMode) {
+          balls[i].vx *= bounceDamp;
+        }
+      } else {
+        balls[i].x = nextX;
+      }
+
+      if (nextY > maxYf) {
+        balls[i].y = maxYf;
+        // With gravity mode enabled, blobs should "sit" at the bottom and
+        // get heated (buoyant) rather than bounce.
+        if (gravityMode) {
+          // Only enter a "rest" period on a real impact; otherwise keep
+          // sticking to the floor and allow heat to accumulate.
+          if (balls[i].restTicks == 0 && balls[i].vy > 0.4f) {
+            balls[i].heat = 0.0f;
+            balls[i].restTicks = 15 + (rand() % 45);
+          }
+          balls[i].vy = 0.0f;
+        } else {
+          balls[i].vy = -fabsf(balls[i].vy);
+        }
+      } else if (nextY < minY) {
+        balls[i].y = minY;
+        // With gravity mode enabled, blobs can linger at the top until they cool.
+        if (gravityMode) {
+          balls[i].vy = 0.0f;
+        } else {
+          balls[i].vy = fabsf(balls[i].vy);
+        }
+      } else {
+        balls[i].y = nextY;
+      }
+
+      // Keep some motion even with damping.
+      if (fabsf(balls[i].vx) < 0.15f) {
+        balls[i].vx = (balls[i].vx < 0 ? -0.15f : 0.15f);
+      }
     }
 
     // render
@@ -137,7 +229,9 @@ int main(int argc, char *argv[]) {
 
           for (int k = 0; k < nballs; k++) {
             int y = j * 2 + j2;
-            float dist_squared = (i - balls[k].x) * (i - balls[k].x) + (y - balls[k].y) * (y - balls[k].y);
+            float dx = (float)i - balls[k].x;
+            float dy = (float)y - balls[k].y;
+            float dist_squared = dx * dx + dy * dy;
             if (dist_squared == 0) {
               sum[j2] += FLT_MAX; 
             } else {
@@ -325,10 +419,12 @@ void init_params() {
   }
 
   for (int i = 0; i < MAX_NBALLS; i++) {
-    balls[i].x = rand() % (maxX - 2 * margin) + margin;
-    balls[i].y = rand() % (maxY - 2 * margin) + margin;
-    balls[i].dx = (rand() % 2 == 0) ? -1 : 1;
-    balls[i].dy = (rand() % 2 == 0) ? -1 : 1;
+    balls[i].x = (float)(rand() % (maxX - 2 * margin) + margin);
+    balls[i].y = (float)(rand() % (maxY - 2 * margin) + margin);
+    balls[i].vx = (rand() % 2 == 0) ? -1.0f : 1.0f;
+    balls[i].vy = (rand() % 2 == 0) ? -1.0f : 1.0f;
+    balls[i].heat = (float)(rand() % 101) / 100.0f;
+    balls[i].restTicks = rand() % 30;
   }
   if(gradient1){
     tb_set_output_mode(TB_OUTPUT_TRUECOLOR);
@@ -366,7 +462,7 @@ int parse_options(int argc, char *argv[]) {
   int c;
   // First pass to check for gradient mode
   optind = 1;  // Reset getopt
-  while ((c = getopt(argc, argv, ":c:k:s:r:R:b:F:Cp:hg")) != -1) {
+  while ((c = getopt(argc, argv, ":c:k:s:r:R:b:F:Cp:hgG")) != -1) {
     if (c == 'g') {
       gradient1 = 1;
       if (!tb_has_truecolor()) {
@@ -379,7 +475,7 @@ int parse_options(int argc, char *argv[]) {
 
   // Reset getopt for second pass
   optind = 1;
-  while ((c = getopt(argc, argv, ":c:k:s:r:R:b:F:Cp:hg")) != -1) {
+  while ((c = getopt(argc, argv, ":c:k:s:r:R:b:F:Cp:hgG")) != -1) {
     switch (c) {
     case 'c':
       if (!set_color(&color, baseColor, optarg, gradient1))
@@ -426,6 +522,9 @@ int parse_options(int argc, char *argv[]) {
     case 'C':
       contained = 1;
       break;
+    case 'G':
+      gravityMode = 1;
+      break;
     case 'p':
       party = atoi(optarg);
       if (party < 0 || party > 3) {
@@ -458,6 +557,7 @@ void print_help() {
       "OPTIONS:\n"
       "  -g                  Enable gradient mode with truecolor support.\n"
       "                      Changes how -c and -k options work.\n"
+  "  -G                  Enable gravity and buoyancy movement (balls heat up at the bottom, rise, cool at the top, then fall).\n"
       "  -c <COLOR>          Set color. In normal mode, available colors are: red, blue, yellow, "
       "green, cyan, magenta, white, and black.\n"
       "                      In gradient mode (-g), use hex format: RRGGBB (e.g., FF0000 for red).\n"
@@ -499,7 +599,8 @@ void print_help() {
       "better resolution of the lava).\n"
       "EXAMPLES:\n"
       "  lavat -c green -k red        Use named colors in normal mode\n"
-      "  lavat -g -c 00FF00 -k FF0000 Use hex colors in gradient mode\n",
+      "  lavat -g -c 00FF00 -k FF0000 Use hex colors in gradient mode\n"
+      "  lavat -G                     Start with gravity mode enabled\n",
       MIN_NBALLS, MAX_NBALLS);
 }
 

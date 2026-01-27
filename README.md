@@ -24,6 +24,7 @@ Usage: lavat [OPTIONS]
 OPTIONS:
   -g                  Enable gradient mode with truecolor support.
                       Changes how -c and -k options work.
+  -G                  Enable gravity and buoyancy movement (balls heat up at the bottom, rise, cool at the top, then fall) .
   -c <COLOR>          Set color. In normal mode, available colors are: red, blue, yellow, green, cyan, magenta, white, and black.
                       In gradient mode (-g), use hex format: RRGGBB (e.g., FF0000 for red).
   -k <COLOR>          Set the rim color. Same format options as -c.
@@ -56,15 +57,24 @@ RUNTIME CONTROLS:
 EXAMPLES:
   lavat -c green -k red        Use named colors in normal mode
   lavat -g -c 00FF00 -k FF0000 Use hex colors in gradient mode
+  lavat -G                     Start with gravity mode enabled
 ```
 
 ## Demo
+
+Most recent features 
+  - -G: gravity + buoyancy movement (balls heat up at the bottom, rise, cool at the top, then fall). Can also be toggled at runtime with `g`.
+  - -g: truecolor gradient mode (makes `-c`/`-k` accept hex colors like `FF0000` and renders a smooth gradient, defaults to `000000` and `FFFFFF`).
+
+`lavat -g -b 8 -r 10 -R 3 -G`
+
+![demo 5](https://i.imgur.com/6WyvkLi.gif)
+
 
 `lavat -p3`
 
 ![demo 1](https://github.com/AngelJumbo/demos/blob/main/lavat/6.gif?raw=true)
 
-PARTY MODE!!!
 
 `lavat -c red -R 1`
 
@@ -87,7 +97,6 @@ For the Alacritty and Kitty users I know that the -R option haven't been working
 
 ![demo 2](https://github.com/AngelJumbo/demos/blob/main/lavat/5.gif?raw=true)
 
-(The colors depend on your color scheme.)
 
 ## Credits
 
