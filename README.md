@@ -63,7 +63,7 @@ EXAMPLES:
 ## Demo
 
 Most recent features 
-  - -G: gravity + buoyancy movement (balls heat up at the bottom, rise, cool at the top, then fall). Can also be toggled at runtime with `g`.
+  - -G: gravity + buoyancy movement (balls heat up at the bottom, rise, cool at the top, then fall).
   - -g: truecolor gradient mode (makes `-c`/`-k` accept hex colors like `FF0000` and renders a smooth gradient, defaults to `000000` and `FFFFFF`).
 
 `lavat -g -b 8 -r 10 -R 3 -G`
