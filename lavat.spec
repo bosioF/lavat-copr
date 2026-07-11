@@ -15,7 +15,7 @@ A quaint little program that simulates a lava lamp in the terminal
 using metaballs and termbox2.
 
 %prep
-%autosetup
+%autosetup -n lavat-copr-%{version}
 
 %build
 %set_build_flags
@@ -23,7 +23,7 @@ using metaballs and termbox2.
 
 %install
 mkdir -p %{buildroot}%{_bindir}
-%make_install PREFIX=%{_prefix}
+%make_install PREFIX=%{_prefix} DESTDIR=%{buildroot}
 
 %files
 %license LICENSE
@@ -31,5 +31,5 @@ mkdir -p %{buildroot}%{_bindir}
 %{_bindir}/lavat
 
 %changelog
-* Sat Jul 11 2026 b0510 - 1.4.0-1
+* Sat Jul 11 2026 b0510 - 1.0.0-1
 - Initial packaging for Fedora Copr
