@@ -23,7 +23,7 @@ using metaballs and termbox2.
 
 %install
 mkdir -p %{buildroot}%{_bindir}
-%make_install PREFIX=%{_prefix} DESTDIR=%{buildroot}
+install -p -m 0755 lavat %{buildroot}%{_bindir}/lavat
 
 %files
 %license LICENSE
