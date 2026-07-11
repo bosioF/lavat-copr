@@ -14,6 +14,7 @@ sudo make install
 
 This program is also available from the following repositories:
 
+Fedora:
 ```bash
 dnf copr enable b0510/lavat
 sudo dnf install lavat
