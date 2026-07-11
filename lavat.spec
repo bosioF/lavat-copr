@@ -1,11 +1,11 @@
 Name:           lavat
-Version:        3.0.0
+Version:        1.0.0
 Release:        1%{?dist}
 Summary:        Lava lamp simulation in the terminal
 
 License:        MIT
-URL:            https://github.com/AngelJumbo/lavat
-Source0:        https://github.com/AngelJumbo/lavat/archive/refs/tags/v%{version}.tar.gz
+URL:            https://github.com/bosioF/lavat-copr
+Source0:        https://github.com/bosioF/lavat-copr/archive/refs/tags/v%{version}.tar.gz
 
 BuildRequires:  gcc
 BuildRequires:  make
